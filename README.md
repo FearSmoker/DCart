@@ -1,4 +1,4 @@
-# DCart
+# <picture><source media="(prefers-color-scheme: dark)" srcset="src/assets/logo_dark.png"><source media="(prefers-color-scheme: light)" srcset="src/assets/logo_light.png"><img src="src/assets/logo_light.png" alt="DCart Logo" width="40" valign="middle" /></picture> DCart
 
 DCart is a modern, enterprise-grade, multi-vendor e-commerce platform built with Next.js 14, Shadcn UI, FastAPI, Sanity CMS, Firebase, Stripe, and a robust real-time microservice architecture. 
 
