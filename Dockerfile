@@ -31,6 +31,10 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy the full source tree
 COPY . .
 
+# Ensure public directory exists (Next.js multi-stage build expects to copy public,
+# but this repository does not use a public directory).
+RUN mkdir -p public
+
 # Disable Next.js telemetry during build
 ENV NEXT_TELEMETRY_DISABLED=1
 
