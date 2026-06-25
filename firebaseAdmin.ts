@@ -19,7 +19,12 @@ try {
   console.warn("Could not load FIREBASE_SERVICE_ACCOUNT_KEY:", error);
 }
 
-if (serviceAccount && !getApps().length) {
+if (
+  serviceAccount &&
+  typeof serviceAccount.project_id === "string" &&
+  serviceAccount.project_id.trim().length > 0 &&
+  !getApps().length
+) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
     storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "dcart-a994e.appspot.com",
