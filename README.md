@@ -1,6 +1,16 @@
-# <picture><source media="(prefers-color-scheme: dark)" srcset="src/assets/logo_dark.png"><source media="(prefers-color-scheme: light)" srcset="src/assets/logo_light.png"><img src="src/assets/logo_light.png" alt="DCart Logo" width="40" valign="middle" /></picture> DCart
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="src/assets/logo_dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="src/assets/logo_light.png">
+    <img alt="DCart Logo" src="src/assets/logo_light.png" width="180">
+  </picture>
+</p>
 
-DCart is a modern, enterprise-grade, multi-vendor e-commerce platform built with Next.js 14, Shadcn UI, FastAPI, Sanity CMS, Firebase, Stripe, and a robust real-time microservice architecture. 
+<h1 align="center">DCart</h1>
+
+<p align="center">
+  A modern, enterprise-grade, multi-vendor e-commerce platform built with Next.js 14, Shadcn UI, FastAPI, Sanity CMS, Firebase, Stripe, and a robust real-time microservice architecture.
+</p> 
 
 It features advanced AI enhancements—such as a Gemini-powered Shopping Copilot, Visual Search, and an automated FastAPI Fraud Detection system—coupled with full DevOps monitoring via Prometheus and Grafana.
 
