@@ -34,6 +34,37 @@ COPY . .
 # Disable Next.js telemetry during build
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Dummy build-time env vars — prevent crashes on missing secrets during `next build`.
+# These are NOT used at runtime; the real values come from the container environment.
+ENV NEXT_PUBLIC_SANITY_API_VERSION=2024-01-01 \
+    NEXT_PUBLIC_SANITY_DATASET=production \
+    NEXT_PUBLIC_SANITY_PROJECT_ID=build-placeholder \
+    NEXT_AUTH_URL=http://localhost:3000 \
+    NEXTAUTH_URL=http://localhost:3000 \
+    AUTH_SECRET=build-placeholder-secret-minimum-32-chars \
+    NEXTAUTH_SECRET=build-placeholder-secret-minimum-32-chars \
+    AUTH_TRUST_HOST=true \
+    AUTH_GOOGLE_ID=build-placeholder \
+    AUTH_GOOGLE_SECRET=build-placeholder \
+    AUTH_GITHUB_ID=build-placeholder \
+    AUTH_GITHUB_SECRET=build-placeholder \
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_build_placeholder \
+    STRIPE_SECRET_KEY=sk_test_build_placeholder \
+    ADMIN_EMAIL=build@placeholder.com \
+    NEXT_PUBLIC_ADMIN_EMAIL=build@placeholder.com \
+    FIREBASE_SERVICE_ACCOUNT_KEY={} \
+    REDIS_URL=redis://127.0.0.1:6379 \
+    GEMINI_API_KEY=build-placeholder \
+    RECOMMENDATION_SERVICE_URL=http://127.0.0.1:8000 \
+    NEXT_PUBLIC_APP_NAME=DCart \
+    PLATFORM_COMMISSION_RATE=0.10 \
+    NEXT_PUBLIC_APP_LOCALE=en-IN \
+    NEXT_PUBLIC_CURRENCY=INR \
+    CLOUDINARY_CLOUD_NAME=build-placeholder \
+    CLOUDINARY_API_KEY=000000000000000 \
+    CLOUDINARY_API_SECRET=build-placeholder \
+    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=build-placeholder
+
 # Build the standalone Next.js application
 RUN npm run build
 

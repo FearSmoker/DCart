@@ -3,12 +3,18 @@
 // Sanity Studio uses React context APIs that are incompatible with SSG.
 export const dynamic = "force-dynamic";
 
+// Define metadata inline instead of re-exporting from next-sanity/studio.
+// Re-exporting from next-sanity/studio triggers its full initialization at
+// module load time (including React.createContext calls), crashing next build.
+export const metadata = {
+  title: "DCart Studio",
+  description: "DCart Sanity Content Studio",
+};
+
 import { NextStudio } from "next-sanity/studio";
 import config from "../../../../../sanity.config";
 import { auth } from "@/auth";
 import AccessDenied from "@/components/AccessDenied";
-
-export { metadata, viewport } from "next-sanity/studio";
 
 export default async function StudioPage() {
   const session = await auth();
