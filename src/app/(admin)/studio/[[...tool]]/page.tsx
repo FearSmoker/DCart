@@ -1,20 +1,30 @@
-
 // Prevent Next.js from statically rendering this page at build time.
-// Sanity Studio uses React context APIs that are incompatible with SSG.
 export const dynamic = "force-dynamic";
 
-// Define metadata inline instead of re-exporting from next-sanity/studio.
-// Re-exporting from next-sanity/studio triggers its full initialization at
-// module load time (including React.createContext calls), crashing next build.
+// Define metadata inline — never re-export from next-sanity/studio at module
+// level, as that initialises Sanity Studio (including createContext) during build.
 export const metadata = {
   title: "DCart Studio",
   description: "DCart Sanity Content Studio",
 };
 
-import { NextStudio } from "next-sanity/studio";
-import config from "../../../../../sanity.config";
+import nextDynamic from "next/dynamic";
 import { auth } from "@/auth";
 import AccessDenied from "@/components/AccessDenied";
+
+// Load StudioClient with ssr:false so the entire sanity/studio configuration
+// and bundle are NEVER imported/evaluated on the server.
+const StudioClient = nextDynamic(
+  () => import("./StudioClient"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-900">
+        <p className="text-zinc-500 dark:text-zinc-400">Loading studio…</p>
+      </div>
+    ),
+  }
+);
 
 export default async function StudioPage() {
   const session = await auth();
@@ -45,5 +55,5 @@ export default async function StudioPage() {
     );
   }
 
-  return <NextStudio config={config} />;
+  return <StudioClient />;
 }

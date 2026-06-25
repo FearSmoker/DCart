@@ -31,13 +31,13 @@ export const redis =
     lazyConnect: true,
   });
 
-// suppress managed-redis config errors (Upstash blocks CONFIG SET)
-redis.on("error", () => { /* suppress */ });
-redis.config("SET", "maxmemory-policy", "noeviction").catch(() => {
-  // Expected on Upstash — CONFIG SET is restricted. Ignore silently.
+// Defer config to the ready event to prevent build-time connection attempts
+redis.on("ready", () => {
+  redis.config("SET", "maxmemory-policy", "noeviction").catch(() => {
+    // Expected on Upstash — CONFIG SET is restricted. Ignore silently.
+  });
 });
-// re-attach real error handler after config attempt
-redis.removeAllListeners("error");
+
 redis.on("error", (err) => {
   // filter out noisy connection noise
   if (!String(err).includes("ERR max number of clients") && !String(err).includes("ECONNRESET")) {
