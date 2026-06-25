@@ -16,7 +16,7 @@ WORKDIR /app
 
 # Copy package manifests first for better layer caching
 COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev
+RUN npm ci
 
 # ---------------------------------------------------------------------------
 # Stage 2: Build the Next.js application
