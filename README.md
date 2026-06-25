@@ -2,7 +2,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="src/assets/logo_dark.png">
     <source media="(prefers-color-scheme: light)" srcset="src/assets/logo_light.png">
-    <img alt="DCart Logo" src="src/assets/logo_light.png" width="180">
+    <img alt="DCart Banner" src="src/assets/logo_light.png" width="100%">
   </picture>
 </p>
 
