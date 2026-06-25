@@ -1,0 +1,155 @@
+# =============================================================================
+# DCart Production Docker Compose
+# =============================================================================
+# Usage:
+#   docker compose up -d              # Start all services
+#   docker compose logs -f nextjs     # Follow logs for a service
+#   docker compose down -v            # Stop and remove volumes
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Nginx — Reverse proxy & load balancer
+  # ---------------------------------------------------------------------------
+  nginx:
+    build:
+      context: ./infrastructure/nginx
+      dockerfile: Dockerfile
+    container_name: dcart-nginx
+    ports:
+      - "80:80"
+    depends_on:
+      nextjs:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    networks:
+      - dcart-network
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Next.js — Frontend application
+  # ---------------------------------------------------------------------------
+  nextjs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dcart-nextjs
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.docker
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - dcart-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
+
+  # ---------------------------------------------------------------------------
+  # AI Service — FastAPI recommendation & fraud engine
+  # ---------------------------------------------------------------------------
+  ai-service:
+    build:
+      context: ./recommendation_service
+      dockerfile: Dockerfile
+    container_name: dcart-ai-service
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - dcart-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+  # ---------------------------------------------------------------------------
+  # Redis — In-memory cache & session store
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: dcart-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - dcart-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+    command: redis-server --appendonly yes
+
+  # ---------------------------------------------------------------------------
+  # Prometheus — Metrics collection
+  # ---------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: dcart-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infrastructure/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - dcart-network
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+
+  # ---------------------------------------------------------------------------
+  # Grafana — Observability dashboards
+  # ---------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: dcart-grafana
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./infrastructure/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infrastructure/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=dcart2026
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - dcart-network
+    restart: unless-stopped
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  dcart-network:
+    driver: bridge
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  redis-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local

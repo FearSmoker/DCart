@@ -1,0 +1,89 @@
+    --gray-850: #18212f;
+    --gray-900: #111827;
+    --gray-950: #030712;
+  }
+  .dark {
+    --background: oklch(0.23 0 0);
+    --foreground: oklch(1 0 0);
+    --card: oklch(0.28 0 0);
+    --card-foreground: oklch(1 0 0);
+    --popover: oklch(0.28 0 0);
+    --popover-foreground: oklch(1 0 0);
+    --primary: oklch(0.95 0 0);
+    --primary-foreground: oklch(0.2 0 0);
+    --secondary: oklch(0.35 0 0);
+    --secondary-foreground: oklch(1 0 0);
+    --muted: oklch(0.35 0 0);
+    --muted-foreground: oklch(0.85 0 0);
+    --accent: oklch(0.35 0 0);
+    --accent-foreground: oklch(1 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 15%);
+    --input: oklch(1 0 0 / 20%);
+    --ring: oklch(0.556 0 0);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --sidebar: oklch(0.25 0 0);
+    --sidebar-foreground: oklch(1 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent: oklch(0.32 0 0);
+    --sidebar-accent-foreground: oklch(1 0 0);
+    --sidebar-border: oklch(1 0 0 / 15%);
+    --sidebar-ring: oklch(0.556 0 0);
+
+    /* CUSTOM ZINC OVERRIDES FOR DARK MODE */
+    /* Map text/muted text to white or extremely light gray */
+    --zinc-50: #ffffff;
+    --zinc-100: #ffffff;
+    --zinc-150: #ffffff;
+    --zinc-200: #ffffff;
+    --zinc-250: #ffffff;
+    --zinc-300: #ffffff;
+    --zinc-400: #ffffff;
+    --zinc-450: #ffffff;
+    --zinc-500: #f4f4f5; /* very light grey */
+    --zinc-600: #e4e4e7; /* light grey border or text */
+    --zinc-650: #e4e4e7;
+    --zinc-655: #e4e4e7;
+    
+    /* Map dark grey backgrounds to light grey */
+    --zinc-700: #52525b; /* medium light border/text */
+    --zinc-750: #3f3f46;
+    --zinc-800: #3f3f46; /* card/item border */
+    --zinc-850: #333338; /* border/hover bg */
+    --zinc-900: #27272a; /* light grey background for cards */
+    --zinc-950: #1c1c1f; /* main dashboard/page background */
+
+    /* CUSTOM GRAY OVERRIDES FOR DARK MODE */
+    /* Map text to white */
+    --gray-50: #ffffff;
+    --gray-100: #ffffff;
+    --gray-150: #ffffff;
+    --gray-200: #ffffff;
+    --gray-250: #ffffff;
+    --gray-300: #ffffff;
+    --gray-400: #ffffff;
+    --gray-500: #f9fafb;
+    --gray-600: #e5e7eb;
+
+    /* Map backgrounds to light grey */
+    --gray-700: #4b5563;
+    --gray-800: #374151; /* card borders/backgrounds */
+    --gray-850: #2d3748; /* border/hover bg */
+    --gray-900: #222b3c; /* light grey background for cards */
+    --gray-950: #18202d; /* main dashboard/page background */
+  }
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}

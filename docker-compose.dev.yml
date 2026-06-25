@@ -1,0 +1,54 @@
+# =============================================================================
+# DCart Development Overrides
+# =============================================================================
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# Enables hot-reload for Next.js and the AI service.
+# Monitoring services (nginx, prometheus, grafana) are optional in dev —
+# they are still included from the base file but can be stopped individually.
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Next.js — Development mode with hot-reload
+  # ---------------------------------------------------------------------------
+  nextjs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: deps                     # Only install deps, don't build
+    volumes:
+      - ./src:/app/src:delegated       # Hot-reload source files
+      - ./public:/app/public:delegated  # Static assets
+      - ./package.json:/app/package.json
+      - ./next.config.mjs:/app/next.config.mjs
+      - ./tailwind.config.ts:/app/tailwind.config.ts
+      - ./postcss.config.mjs:/app/postcss.config.mjs
+      - ./tsconfig.json:/app/tsconfig.json
+    command: ["npm", "run", "dev"]
+    environment:
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true         # Enable polling for Docker file-watching
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # AI Service — Development mode with auto-reload
+  # ---------------------------------------------------------------------------
+  ai-service:
+    volumes:
+      - ./recommendation_service:/app:delegated
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    environment:
+      - REDIS_URL=redis://redis:6379
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 5

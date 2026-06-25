@@ -1,0 +1,44 @@
+# =============================================================================
+# DCart .dockerignore — Keep Docker context lean
+# =============================================================================
+
+# Node / Next.js
+node_modules/
+.next/
+.turbo/
+
+# Version control
+.git/
+.gitignore
+
+# Python virtual environments
+venv/
+recommendation_service/venv/
+recommendation_service/__pycache__/
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment files (secrets — injected at runtime)
+.env.local
+.env.docker
+.env.*.local
+
+# Documentation
+*.md
+LICENSE
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Docker (avoid recursive context)
+docker-compose*.yml
+Dockerfile
+
+# Build artifacts
+tsconfig.tsbuildinfo

@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+redis
+scikit-learn
+xgboost
+pandas
+numpy
+transformers
+torch
+faiss-cpu
+Pillow
+httpx
+google-generativeai
+python-multipart

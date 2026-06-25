@@ -1,0 +1,65 @@
+# =============================================================================
+# DCart Prometheus Configuration
+# =============================================================================
+# Scrapes metrics from all platform services every 15 seconds.
+# =============================================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+# =============================================================================
+# Scrape Configurations
+# =============================================================================
+scrape_configs:
+  # ---------------------------------------------------------------------------
+  # Next.js frontend
+  # ---------------------------------------------------------------------------
+  - job_name: "nextjs"
+    static_configs:
+      - targets: ["nextjs:3000"]
+        labels:
+          service: "frontend"
+    metrics_path: /api/metrics
+    scrape_interval: 30s
+
+  # ---------------------------------------------------------------------------
+  # FastAPI AI / Recommendation Service
+  # ---------------------------------------------------------------------------
+  - job_name: "ai-service"
+    static_configs:
+      - targets: ["ai-service:8000"]
+        labels:
+          service: "ai"
+    metrics_path: /metrics
+
+  # ---------------------------------------------------------------------------
+  # Nginx reverse proxy
+  # ---------------------------------------------------------------------------
+  - job_name: "nginx"
+    static_configs:
+      - targets: ["nginx:80"]
+        labels:
+          service: "proxy"
+    metrics_path: /nginx-health
+    scrape_interval: 30s
+
+  # ---------------------------------------------------------------------------
+  # Redis (via redis-exporter if deployed, otherwise basic probe)
+  # ---------------------------------------------------------------------------
+  - job_name: "redis"
+    static_configs:
+      - targets: ["redis:6379"]
+        labels:
+          service: "cache"
+    scrape_interval: 30s
+
+  # ---------------------------------------------------------------------------
+  # Prometheus self-monitoring
+  # ---------------------------------------------------------------------------
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+        labels:
+          service: "monitoring"

@@ -1,0 +1,186 @@
+# =============================================================================
+# DCart CI — Continuous Integration Pipeline
+# =============================================================================
+# Triggers on push & PR to main.
+# Runs lint, type-check, build, Python validation, and Docker integration tests.
+# =============================================================================
+
+name: DCart CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: "20"
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job 1: Lint & Type-check the Next.js codebase
+  # ---------------------------------------------------------------------------
+  lint-and-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npx next lint
+
+      - name: Run TypeScript type-check
+        run: npx tsc --noEmit
+
+  # ---------------------------------------------------------------------------
+  # Job 2: Build the Next.js application
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build Next.js
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js application
+        run: npx next build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+  # ---------------------------------------------------------------------------
+  # Job 3: Validate Python AI service
+  # ---------------------------------------------------------------------------
+  python-check:
+    name: Python Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+          cache-dependency-path: recommendation_service/requirements.txt
+
+      - name: Install Python dependencies
+        run: pip install -r recommendation_service/requirements.txt
+
+      - name: Compile-check main.py
+        run: python -m py_compile recommendation_service/main.py
+
+      - name: Compile-check fraud_detector.py
+        run: python -m py_compile recommendation_service/fraud_detector.py
+
+  # ---------------------------------------------------------------------------
+  # Job 4: Docker integration — build, start, health-check, teardown
+  # ---------------------------------------------------------------------------
+  docker-build:
+    name: Docker Integration Test
+    runs-on: ubuntu-latest
+    needs: [build, python-check]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create .env.docker for CI
+        run: |
+          cat > .env.docker << 'EOF'
+          NEXT_PUBLIC_SANITY_API_VERSION=2024-01-01
+          NEXT_PUBLIC_SANITY_DATASET=production
+          NEXT_PUBLIC_SANITY_PROJECT_ID=ci-test
+          NEXT_AUTH_URL=http://localhost:3000
+          AUTH_SECRET=ci-test-secret
+          AUTH_GOOGLE_ID=ci-test
+          AUTH_GOOGLE_SECRET=ci-test
+          AUTH_GITHUB_ID=ci-test
+          AUTH_GITHUB_SECRET=ci-test
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_ci
+          STRIPE_SECRET_KEY=sk_test_ci
+          ADMIN_EMAIL=ci@test.com
+          FIREBASE_SERVICE_ACCOUNT_KEY={}
+          REDIS_URL=redis://redis:6379
+          AI_SERVICE_URL=http://ai-service:8000
+          EOF
+
+      - name: Build all Docker images
+        run: docker compose build
+
+      - name: Start services
+        run: docker compose up -d
+
+      - name: Wait for services to be healthy
+        run: |
+          echo "Waiting for services to start..."
+          sleep 60
+
+          echo "Checking Redis..."
+          docker compose exec -T redis redis-cli ping || echo "Redis not ready"
+
+          echo "Checking AI Service..."
+          for i in $(seq 1 10); do
+            if curl -sf http://localhost:8000/health; then
+              echo "AI Service is healthy"
+              break
+            fi
+            echo "Attempt $i: AI Service not ready, waiting..."
+            sleep 10
+          done
+
+          echo "Checking Next.js..."
+          for i in $(seq 1 10); do
+            if curl -sf http://localhost:3000/; then
+              echo "Next.js is healthy"
+              break
+            fi
+            echo "Attempt $i: Next.js not ready, waiting..."
+            sleep 10
+          done
+
+          echo "Checking Nginx..."
+          for i in $(seq 1 5); do
+            if curl -sf http://localhost/nginx-health; then
+              echo "Nginx is healthy"
+              break
+            fi
+            echo "Attempt $i: Nginx not ready, waiting..."
+            sleep 5
+          done
+
+      - name: Run health checks
+        run: |
+          echo "=== Final Health Checks ==="
+          curl -f http://localhost/nginx-health && echo " ✅ Nginx OK"
+          curl -f http://localhost:3000/ && echo " ✅ Next.js OK"
+          curl -f http://localhost:8000/health && echo " ✅ AI Service OK"
+          curl -f http://localhost:9090/-/healthy && echo " ✅ Prometheus OK"
+
+      - name: Print service logs on failure
+        if: failure()
+        run: docker compose logs --tail=100
+
+      - name: Tear down services
+        if: always()
+        run: docker compose down -v
