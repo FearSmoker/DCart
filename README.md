@@ -1,48 +1,48 @@
-# DCart 🚀
+# DCart
 
-DCart is a modern, enterprise-grade, multi-vendor e-commerce platform built with **Next.js 14**, **FastAPI**, **Sanity CMS**, **Firebase**, **Stripe**, and a robust real-time microservice architecture. 
+DCart is a modern, enterprise-grade, multi-vendor e-commerce platform built with Next.js 14, Shadcn UI, FastAPI, Sanity CMS, Firebase, Stripe, and a robust real-time microservice architecture. 
 
-It features advanced AI enhancements—such as a Gemini-powered **Shopping Copilot**, **Visual Search**, and an automated **FastAPI Fraud Detection** system—coupled with full DevOps monitoring via **Prometheus** and **Grafana**.
+It features advanced AI enhancements—such as a Gemini-powered Shopping Copilot, Visual Search, and an automated FastAPI Fraud Detection system—coupled with full DevOps monitoring via Prometheus and Grafana.
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 The following diagram illustrates how the client interfaces, reverse proxies, application servers, databases, messaging layers, and monitoring stacks interact:
 
 ```mermaid
 graph TD
     %% Clients
-    User["🌐 User (Browser)"]
-    Vendor["💼 Vendor (Browser)"]
-    Admin["👑 Admin (Studio)"]
+    User["User (Browser)"]
+    Vendor["Vendor (Browser)"]
+    Admin["Admin (Studio)"]
 
     %% Infrastructure / Gateway
-    Nginx["🛡️ Nginx Reverse Proxy"]
+    Nginx["Nginx Reverse Proxy"]
 
     %% Application Servers
-    NextApp["🚀 Next.js App (Next.js Server)"]
-    FastAPI["🐍 AI Recommendation & Fraud Service (FastAPI)"]
+    NextApp["Next.js App (Next.js Server)"]
+    FastAPI["AI Recommendation & Fraud Service (FastAPI)"]
 
     %% Core Data & CMS
-    Sanity["☁️ Sanity.io (Product Catalog)"]
-    Firebase["🔥 Firebase/Firestore (Profiles & Data)"]
+    Sanity["Sanity.io (Product Catalog)"]
+    Firebase["Firebase/Firestore (Profiles & Data)"]
 
     %% Event Streams & Caching
-    Redis["⚡ Redis (Caching, PubSub, Rate Limiting)"]
-    Kafka["📭 Apache Kafka (Event Streaming)"]
+    Redis["Redis (Caching, PubSub, Rate Limiting)"]
+    Kafka["Apache Kafka (Event Streaming)"]
 
     %% Real-time Socket Server
-    Socket["🔌 Socket.io WebSockets"]
+    Socket["Socket.io WebSockets"]
 
     %% External Services
-    Stripe["💳 Stripe Payments API"]
-    Gemini["🤖 Gemini Pro API"]
-    Cloudinary["🖼️ Cloudinary CDN"]
+    Stripe["Stripe Payments API"]
+    Gemini["Gemini Pro API"]
+    Cloudinary["Cloudinary CDN"]
 
     %% Monitoring Stack
-    Prometheus["📊 Prometheus (Metrics Scraper)"]
-    Grafana["📈 Grafana (DevOps Dashboards)"]
+    Prometheus["Prometheus (Metrics Scraper)"]
+    Grafana["Grafana (DevOps Dashboards)"]
 
     %% Connections
     User --> Nginx
@@ -70,39 +70,39 @@ graph TD
 
 ---
 
-## 🔥 Key Features
+## Key Features
 
-### 1. 💼 Multi-Vendor Marketplace
+### 1. Multi-Vendor Marketplace
 - **Separate Portals**: Independent onboarding, product publishing, dispatch management, returns tracking, and payout flows for vendors.
 - **Platform Commission**: Custom fee model built directly into checkout pipelines (configurable via environment variables).
 
-### 2. 🧠 AI & Intelligent Enhancements
-- **🤖 Shopping Copilot**: A context-aware Gemini AI chatbot that helps users discover products, check stock, and answer queries.
-- **🔍 Visual Search**: Find products by uploading images, powered by image embedding similarity models.
-- **🛡️ Fraud Detection**: Real-time scoring of checkout transactions via a Python FastAPI microservice utilizing a Random Forest ML model.
-- **📊 AI Review Insights**: Automatic reviews parsing and sentiment summaries directly on product pages.
+### 2. AI & Intelligent Enhancements
+- **Shopping Copilot**: A context-aware Gemini AI chatbot that helps users discover products, check stock, and answer queries.
+- **Visual Search**: Find products by uploading images, powered by image embedding similarity models.
+- **Fraud Detection**: Real-time scoring of checkout transactions via a Python FastAPI microservice utilizing a Random Forest ML model.
+- **AI Review Insights**: Automatic reviews parsing and sentiment summaries directly on product pages.
 
-### 3. 🔌 Real-Time & Event-Driven Engine
+### 3. Real-Time & Event-Driven Engine
 - **WebSockets**: Real-time customer support chat and dynamic dashboard alerts powered by Socket.io.
 - **Event Streaming**: Asynchronous event publishing and analytics pipelines with Apache Kafka.
 - **Caching & Rate Limiting**: Distributed cache and API rate limiting powered by Redis.
 
-### 4. 💳 Payments & Dynamic Pricing
+### 4. Payments & Dynamic Pricing
 - **Stripe Checkout**: Secure payment processing with automated payout splits and checkout session tracking.
 - **Dynamic Pricing Engine**: Automated price optimization based on demand, user history, and inventory levels.
 
-### 5. 🛡️ Infrastructure & Monitoring (DevOps)
+### 5. Infrastructure & Monitoring (DevOps)
 - **Nginx Reverse Proxy**: Single ingress gateway routing traffic to Next.js or FastAPI.
 - **Prometheus Scraper**: Exposes and collects real-time system latency, request count, and memory metrics.
 - **Grafana Visualization**: Built-in dashboards to monitor site health, security alerts, and threat vectors.
 
 ---
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 | Component | Technology | Description |
 | :--- | :--- | :--- |
-| **Frontend** | React, Next.js (App Router), Tailwind CSS, Redux Toolkit | Server-side rendering, State management |
+| **Frontend** | React, Next.js (App Router), Tailwind CSS, Shadcn UI, Redux Toolkit | Server-side rendering, UI components, state management |
 | **Databases** | Sanity.io, Cloud Firestore (Firebase) | Content Management System, User Accounts |
 | **AI Microservice**| FastAPI, Scikit-Learn (Random Forest) | Machine Learning & Analytics service |
 | **Messaging/Cache**| Redis, Apache Kafka | Real-time caching, event streaming, PubSub |
@@ -112,7 +112,7 @@ graph TD
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 dcart/
@@ -140,7 +140,7 @@ dcart/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 Make sure you have the following installed on your machine:
@@ -191,11 +191,11 @@ To start the application along with Nginx, Prometheus, and Grafana:
 docker-compose up --build
 ```
 - **Nginx Ingress**: Access the site through Nginx at [http://localhost:80](http://localhost:80)
-- **Grafana Dashboard**: Monitor system metrics at [http://localhost:3000](http://localhost:3000) (Default credentials: `admin` / `admin`)
+- **Grafana Dashboard**: Monitor system metrics at [http://localhost:3000](http://localhost:3000) (Default credentials: admin / admin)
 - **Prometheus Console**: Inspect raw scraped metrics at [http://localhost:9090](http://localhost:9090)
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the [MIT License](LICENSE).
