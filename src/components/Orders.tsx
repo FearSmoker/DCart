@@ -462,7 +462,7 @@ const Orders = () => {
                               Reason: <span className="font-medium">{item.value?.return_reason}</span>
                             </p>
                             <p className="mt-0.5 text-blue-500 dark:text-blue-500">
-                              Awaiting seller review. You'll be notified once it's processed.
+                              {"Awaiting seller review. You'll be notified once it's processed."}
                             </p>
                           </div>
                         </div>
