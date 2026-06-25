@@ -201,7 +201,7 @@ To start the application along with Nginx, Prometheus, and Grafana:
 docker-compose up --build
 ```
 - **Nginx Ingress**: Access the site through Nginx at [http://localhost:80](http://localhost:80)
-- **Grafana Dashboard**: Monitor system metrics at [http://localhost:3000](http://localhost:3000) (Default credentials: admin / admin)
+- **Grafana Dashboard**: Monitor system metrics at [http://localhost:3001](http://localhost:3001) (Default credentials: admin / dcart2026)
 - **Prometheus Console**: Inspect raw scraped metrics at [http://localhost:9090](http://localhost:9090)
 
 ---
