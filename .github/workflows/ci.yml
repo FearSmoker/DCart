@@ -14,7 +14,7 @@ on:
     branches: [main]
 
 env:
-  NODE_VERSION: "20"
+  NODE_VERSION: "22"
   PYTHON_VERSION: "3.12"
 
 jobs:
@@ -67,6 +67,35 @@ jobs:
         run: npx next build
         env:
           NEXT_TELEMETRY_DISABLED: 1
+          # Stub values — prevent build-time crashes on missing secrets
+          NEXT_PUBLIC_SANITY_API_VERSION: "2024-01-01"
+          NEXT_PUBLIC_SANITY_DATASET: production
+          NEXT_PUBLIC_SANITY_PROJECT_ID: ci-test
+          NEXT_AUTH_URL: "http://localhost:3000"
+          NEXTAUTH_URL: "http://localhost:3000"
+          AUTH_SECRET: "ci-test-secret-minimum-32-chars!!"
+          NEXTAUTH_SECRET: "ci-test-secret-minimum-32-chars!!"
+          AUTH_TRUST_HOST: "true"
+          AUTH_GOOGLE_ID: ci-test
+          AUTH_GOOGLE_SECRET: ci-test
+          AUTH_GITHUB_ID: ci-test
+          AUTH_GITHUB_SECRET: ci-test
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_ci
+          STRIPE_SECRET_KEY: sk_test_ci
+          ADMIN_EMAIL: ci@test.com
+          NEXT_PUBLIC_ADMIN_EMAIL: ci@test.com
+          FIREBASE_SERVICE_ACCOUNT_KEY: "{}"
+          REDIS_URL: "redis://127.0.0.1:6379"
+          GEMINI_API_KEY: ci-test
+          RECOMMENDATION_SERVICE_URL: "http://127.0.0.1:8000"
+          NEXT_PUBLIC_APP_NAME: DCart
+          PLATFORM_COMMISSION_RATE: "0.10"
+          NEXT_PUBLIC_APP_LOCALE: en-IN
+          NEXT_PUBLIC_CURRENCY: INR
+          CLOUDINARY_CLOUD_NAME: ci-test
+          CLOUDINARY_API_KEY: "000000000000000"
+          CLOUDINARY_API_SECRET: ci-test
+          NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: ci-test
 
   # ---------------------------------------------------------------------------
   # Job 3: Validate Python AI service

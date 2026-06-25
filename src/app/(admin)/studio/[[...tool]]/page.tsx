@@ -1,4 +1,7 @@
 
+// Prevent Next.js from statically rendering this page at build time.
+// Sanity Studio uses React context APIs that are incompatible with SSG.
+export const dynamic = "force-dynamic";
 
 import { NextStudio } from "next-sanity/studio";
 import config from "../../../../../sanity.config";
