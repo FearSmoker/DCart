@@ -340,13 +340,25 @@ const SearchInput = () => {
     }
   }, [voiceSupported, clearAllTimers, setStateAndRef, navigateWithTranscript]);
 
-  const handleVoiceButtonClick = useCallback(() => {
+  const handleVoiceButtonClick = useCallback(async () => {
     if (voiceState === "listening") {
       stopVoiceRecognition();
-    } else if (voiceState === "idle" || voiceState === "error") {
-      startVoiceRecognition();
+      return;
     }
-  }, [voiceState, startVoiceRecognition, stopVoiceRecognition]);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      startVoiceRecognition();
+    } catch {
+      setVoiceError("Microphone access denied. Please allow microphone access in your browser settings.");
+      setStateAndRef("error");
+      setTimeout(() => {
+        setStateAndRef("idle");
+        setVoiceError("");
+      }, 5000);
+    }
+  }, [voiceState, startVoiceRecognition, stopVoiceRecognition, setStateAndRef]);
 
   const getVoiceButtonTitle = () => {
     if (!voiceSupported) return "Voice search not supported in this browser";
