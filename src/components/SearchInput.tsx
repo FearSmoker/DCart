@@ -71,6 +71,8 @@ const SearchInput = () => {
   const [voiceSupported, setVoiceSupported] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const voiceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const transcriptRef = useRef("");
+  const voiceStateRef = useRef<VoiceState>("idle");
 
   // voice search handler
   useEffect(() => {
@@ -80,6 +82,14 @@ const SearchInput = () => {
       setVoiceSupported(supported);
     }
   }, []);
+
+  useEffect(() => {
+    transcriptRef.current = search;
+  }, [search]);
+
+  useEffect(() => {
+    voiceStateRef.current = voiceState;
+  }, [voiceState]);
 
   // autocomplete suggestions
   useEffect(() => {
@@ -195,11 +205,12 @@ const SearchInput = () => {
           transcript += event.results[i][0].transcript;
         }
 
-        // live preview in search box
         setSearch(transcript);
+        transcriptRef.current = transcript;
 
         if (event.results[event.resultIndex]?.isFinal) {
           setVoiceState("processing");
+          voiceStateRef.current = "processing";
           if (voiceTimeoutRef.current) clearTimeout(voiceTimeoutRef.current);
         }
       };
@@ -214,24 +225,30 @@ const SearchInput = () => {
           setVoiceError(`Voice error: ${event.error}`);
         }
         setVoiceState("error");
-        setTimeout(() => setVoiceState("idle"), 3000);
+        voiceStateRef.current = "error";
+        setTimeout(() => {
+          setVoiceState("idle");
+          voiceStateRef.current = "idle";
+        }, 3000);
       };
 
       recognition.onend = () => {
         if (voiceTimeoutRef.current) clearTimeout(voiceTimeoutRef.current);
-        const finalText = search || "";
-        if (finalText.trim() && voiceState !== "error") {
+        const finalText = transcriptRef.current;
+        if (finalText.trim() && voiceStateRef.current !== "error") {
           setVoiceState("processing");
-          // navigate to search with voice query
+          voiceStateRef.current = "processing";
           setTimeout(() => {
             if (finalText.trim()) {
               router.push(`/search?q=${encodeURIComponent(finalText.trim())}&source=voice`);
               setShowDropdown(false);
             }
             setVoiceState("idle");
+            voiceStateRef.current = "idle";
           }, 500);
-        } else if (voiceState !== "error") {
+        } else if (voiceStateRef.current !== "error") {
           setVoiceState("idle");
+          voiceStateRef.current = "idle";
         }
       };
 
@@ -240,9 +257,13 @@ const SearchInput = () => {
       console.error("Voice recognition error:", err);
       setVoiceError("Could not start voice recognition.");
       setVoiceState("error");
-      setTimeout(() => setVoiceState("idle"), 3000);
+      voiceStateRef.current = "error";
+      setTimeout(() => {
+        setVoiceState("idle");
+        voiceStateRef.current = "idle";
+      }, 3000);
     }
-  }, [voiceSupported, router, search, voiceState]);
+  }, [voiceSupported, router]);
 
   const stopVoiceRecognition = useCallback(() => {
     if (voiceTimeoutRef.current) clearTimeout(voiceTimeoutRef.current);
