@@ -22,7 +22,7 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
-  output: "standalone",
+  output: process.env.NETLIFY === "true" ? undefined : "standalone",
   eslint: {
     ignoreDuringBuilds: false,
   },
