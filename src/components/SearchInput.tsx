@@ -76,6 +76,7 @@ const SearchInput = () => {
   const voiceStateRef = useRef<VoiceState>("idle");
   const hasResultRef = useRef(false);
   const intentionalStopRef = useRef(false);
+  const startedRef = useRef(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -223,12 +224,13 @@ const SearchInput = () => {
       recognition.lang = "en-IN";
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
-      recognition.continuous = true;
+      recognition.continuous = false;
 
       recognitionRef.current = recognition;
       transcriptRef.current = "";
       hasResultRef.current = false;
       intentionalStopRef.current = false;
+      startedRef.current = false;
       setSearch("");
       setVoiceError("");
       setStateAndRef("listening");
@@ -240,6 +242,7 @@ const SearchInput = () => {
       }, MAX_LISTEN_MS);
 
       recognition.onstart = () => {
+        startedRef.current = true;
         setStateAndRef("listening");
       };
 
@@ -310,6 +313,16 @@ const SearchInput = () => {
         }
 
         if (voiceStateRef.current === "error") {
+          return;
+        }
+
+        if (!startedRef.current) {
+          setVoiceError("Microphone access denied. Click the lock icon in address bar → allow mic → reload the page.");
+          setStateAndRef("error");
+          setTimeout(() => {
+            setStateAndRef("idle");
+            setVoiceError("");
+          }, 5000);
           return;
         }
 
