@@ -173,7 +173,7 @@ const SearchInput = () => {
   
   // voice search handler
   
-  const startVoiceRecognition = useCallback(async () => {
+  const startVoiceRecognition = useCallback(() => {
     if (!voiceSupported) {
       setVoiceError("Voice search is not supported in your browser.");
       setVoiceState("error");
@@ -182,20 +182,6 @@ const SearchInput = () => {
         setVoiceState("idle");
         voiceStateRef.current = "idle";
       }, 3000);
-      return;
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((t) => t.stop());
-    } catch {
-      setVoiceError("Microphone access denied. Please allow microphone permission in your browser settings.");
-      setVoiceState("error");
-      voiceStateRef.current = "error";
-      setTimeout(() => {
-        setVoiceState("idle");
-        voiceStateRef.current = "idle";
-      }, 4000);
       return;
     }
 
@@ -225,10 +211,8 @@ const SearchInput = () => {
         for (let i = event.resultIndex; i < event.results.length; i++) {
           transcript += event.results[i][0].transcript;
         }
-
         setSearch(transcript);
         transcriptRef.current = transcript;
-
         if (event.results[event.resultIndex]?.isFinal) {
           setVoiceState("processing");
           voiceStateRef.current = "processing";
@@ -239,18 +223,20 @@ const SearchInput = () => {
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         if (voiceTimeoutRef.current) clearTimeout(voiceTimeoutRef.current);
         if (event.error === "no-speech") {
-          setVoiceError("No speech detected. Please try again.");
-        } else if (event.error === "not-allowed") {
-          setVoiceError("Microphone access denied. Please allow microphone permission in your browser settings.");
+          setVoiceError("No speech detected. Try again.");
+        } else if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+          setVoiceError("Microphone blocked. Click the lock icon in your address bar → allow microphone → reload the page.");
+        } else if (event.error === "network") {
+          setVoiceError("Network error. Check your connection and try again.");
         } else {
-          setVoiceError(`Voice error: ${event.error}`);
+          setVoiceError(`Voice error: ${event.error}. Please try again.`);
         }
         setVoiceState("error");
         voiceStateRef.current = "error";
         setTimeout(() => {
           setVoiceState("idle");
           voiceStateRef.current = "idle";
-        }, 4000);
+        }, 5000);
       };
 
       recognition.onend = () => {
@@ -260,10 +246,8 @@ const SearchInput = () => {
           setVoiceState("processing");
           voiceStateRef.current = "processing";
           setTimeout(() => {
-            if (finalText.trim()) {
-              router.push(`/search?q=${encodeURIComponent(finalText.trim())}&source=voice`);
-              setShowDropdown(false);
-            }
+            router.push(`/search?q=${encodeURIComponent(finalText.trim())}&source=voice`);
+            setShowDropdown(false);
             setVoiceState("idle");
             voiceStateRef.current = "idle";
           }, 500);
@@ -276,7 +260,7 @@ const SearchInput = () => {
       recognition.start();
     } catch (err) {
       console.error("Voice recognition error:", err);
-      setVoiceError("Could not start voice recognition.");
+      setVoiceError("Could not start voice recognition. Please try again.");
       setVoiceState("error");
       voiceStateRef.current = "error";
       setTimeout(() => {
@@ -285,6 +269,7 @@ const SearchInput = () => {
       }, 3000);
     }
   }, [voiceSupported, router]);
+
 
 
 
