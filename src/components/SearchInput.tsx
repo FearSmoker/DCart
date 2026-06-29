@@ -8,9 +8,6 @@ import { urlFor } from "@/sanity/lib/image";
 import { ProductData } from "../../types";
 import FormattedPrice from "./FormattedPrice";
 
-
-// voice search handler
-
 declare global {
   interface Window {
     SpeechRecognition: new () => SpeechRecognition;
@@ -23,9 +20,12 @@ declare global {
     continuous: boolean;
     start(): void;
     stop(): void;
+    abort(): void;
     onresult: ((event: SpeechRecognitionEvent) => void) | null;
     onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
     onend: (() => void) | null;
+    onstart: (() => void) | null;
+    onaudiostart: (() => void) | null;
   }
   interface SpeechRecognitionEvent extends Event {
     readonly resultIndex: number;
@@ -54,6 +54,9 @@ declare global {
 
 type VoiceState = "idle" | "listening" | "processing" | "error";
 
+const SILENCE_TIMEOUT_MS = 2000;
+const MAX_LISTEN_MS = 15000;
+
 const SearchInput = () => {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -63,35 +66,25 @@ const SearchInput = () => {
   const [activeIndex, setActiveIndex] = useState(-1);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // visual search redirect
-
-  // phase 12 — voice commerce
   const [voiceState, setVoiceState] = useState<VoiceState>("idle");
   const [voiceError, setVoiceError] = useState("");
   const [voiceSupported, setVoiceSupported] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const voiceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const maxTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transcriptRef = useRef("");
   const voiceStateRef = useRef<VoiceState>("idle");
+  const hasResultRef = useRef(false);
+  const intentionalStopRef = useRef(false);
 
-  // voice search handler
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const supported =
-        "SpeechRecognition" in window || "webkitSpeechRecognition" in window;
-      setVoiceSupported(supported);
+      setVoiceSupported(
+        "SpeechRecognition" in window || "webkitSpeechRecognition" in window
+      );
     }
   }, []);
 
-  useEffect(() => {
-    transcriptRef.current = search;
-  }, [search]);
-
-  useEffect(() => {
-    voiceStateRef.current = voiceState;
-  }, [voiceState]);
-
-  // autocomplete suggestions
   useEffect(() => {
     if (!search.trim()) {
       setSuggestions([]);
@@ -111,8 +104,7 @@ const SearchInput = () => {
         } else {
           setSuggestions([]);
         }
-      } catch (error) {
-        console.error("Autocomplete fetch error:", error);
+      } catch {
         setSuggestions([]);
       } finally {
         setLoading(false);
@@ -122,7 +114,6 @@ const SearchInput = () => {
     return () => clearTimeout(delayDebounce);
   }, [search]);
 
-  // close on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -133,11 +124,11 @@ const SearchInput = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // clean up voice search
   useEffect(() => {
     return () => {
-      recognitionRef.current?.stop();
-      if (voiceTimeoutRef.current) clearTimeout(voiceTimeoutRef.current);
+      recognitionRef.current?.abort();
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      if (maxTimerRef.current) clearTimeout(maxTimerRef.current);
     };
   }, []);
 
@@ -170,20 +161,59 @@ const SearchInput = () => {
     }
   };
 
-  
-  // voice search handler
-  
+  const clearAllTimers = useCallback(() => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    if (maxTimerRef.current) {
+      clearTimeout(maxTimerRef.current);
+      maxTimerRef.current = null;
+    }
+  }, []);
+
+  const setStateAndRef = useCallback((state: VoiceState) => {
+    setVoiceState(state);
+    voiceStateRef.current = state;
+  }, []);
+
+  const navigateWithTranscript = useCallback(() => {
+    const text = transcriptRef.current.trim();
+    if (text) {
+      setStateAndRef("processing");
+      setTimeout(() => {
+        router.push(`/search?q=${encodeURIComponent(text)}&source=voice`);
+        setShowDropdown(false);
+        setStateAndRef("idle");
+      }, 400);
+    } else {
+      setStateAndRef("idle");
+    }
+  }, [router, setStateAndRef]);
+
+  const stopVoiceRecognition = useCallback(() => {
+    clearAllTimers();
+    intentionalStopRef.current = true;
+    if (recognitionRef.current) {
+      recognitionRef.current.abort();
+      recognitionRef.current = null;
+    }
+    navigateWithTranscript();
+  }, [clearAllTimers, navigateWithTranscript]);
+
   const startVoiceRecognition = useCallback(() => {
     if (!voiceSupported) {
       setVoiceError("Voice search is not supported in your browser.");
-      setVoiceState("error");
-      voiceStateRef.current = "error";
-      setTimeout(() => {
-        setVoiceState("idle");
-        voiceStateRef.current = "idle";
-      }, 3000);
+      setStateAndRef("error");
+      setTimeout(() => setStateAndRef("idle"), 3000);
       return;
     }
+
+    if (recognitionRef.current) {
+      recognitionRef.current.abort();
+      recognitionRef.current = null;
+    }
+    clearAllTimers();
 
     try {
       const SpeechRecognitionAPI =
@@ -193,114 +223,129 @@ const SearchInput = () => {
       recognition.lang = "en-IN";
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
-      recognition.continuous = false;
+      recognition.continuous = true;
 
       recognitionRef.current = recognition;
       transcriptRef.current = "";
+      hasResultRef.current = false;
+      intentionalStopRef.current = false;
       setSearch("");
-      setVoiceState("listening");
-      voiceStateRef.current = "listening";
       setVoiceError("");
+      setStateAndRef("listening");
 
-      voiceTimeoutRef.current = setTimeout(() => {
-        recognition.stop();
-      }, 8000);
+      maxTimerRef.current = setTimeout(() => {
+        if (recognitionRef.current) {
+          recognitionRef.current.stop();
+        }
+      }, MAX_LISTEN_MS);
+
+      recognition.onstart = () => {
+        setStateAndRef("listening");
+      };
 
       recognition.onresult = (event: SpeechRecognitionEvent) => {
-        let transcript = "";
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
+        hasResultRef.current = true;
+
+        let finalTranscript = "";
+        let interimTranscript = "";
+
+        for (let i = 0; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
         }
-        setSearch(transcript);
-        transcriptRef.current = transcript;
-        if (event.results[event.resultIndex]?.isFinal) {
-          setVoiceState("processing");
-          voiceStateRef.current = "processing";
-          if (voiceTimeoutRef.current) clearTimeout(voiceTimeoutRef.current);
+
+        const combined = (finalTranscript + interimTranscript).trim();
+        setSearch(combined);
+        transcriptRef.current = combined;
+
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = null;
+        }
+
+        if (finalTranscript.trim()) {
+          silenceTimerRef.current = setTimeout(() => {
+            if (recognitionRef.current && voiceStateRef.current === "listening") {
+              recognitionRef.current.stop();
+            }
+          }, SILENCE_TIMEOUT_MS);
         }
       };
 
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        if (voiceTimeoutRef.current) clearTimeout(voiceTimeoutRef.current);
+        clearAllTimers();
+
+        if (event.error === "aborted") {
+          return;
+        }
+
         if (event.error === "no-speech") {
           setVoiceError("No speech detected. Try again.");
         } else if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-          setVoiceError("Microphone blocked. Click the lock icon in your address bar → allow microphone → reload the page.");
+          setVoiceError("Microphone blocked. Click the lock icon in address bar → allow mic → reload.");
         } else if (event.error === "network") {
-          setVoiceError("Network error. Check your connection and try again.");
+          setVoiceError("Network error. Check your connection.");
+        } else if (event.error === "audio-capture") {
+          setVoiceError("No microphone found. Check your mic is connected.");
         } else {
-          setVoiceError(`Voice error: ${event.error}. Please try again.`);
+          setVoiceError("Voice error. Please try again.");
         }
-        setVoiceState("error");
-        voiceStateRef.current = "error";
+
+        setStateAndRef("error");
         setTimeout(() => {
-          setVoiceState("idle");
-          voiceStateRef.current = "idle";
-        }, 5000);
+          setStateAndRef("idle");
+          setVoiceError("");
+        }, 4000);
       };
 
       recognition.onend = () => {
-        if (voiceTimeoutRef.current) clearTimeout(voiceTimeoutRef.current);
-        const finalText = transcriptRef.current;
-        if (finalText.trim() && voiceStateRef.current !== "error") {
-          setVoiceState("processing");
-          voiceStateRef.current = "processing";
-          setTimeout(() => {
-            router.push(`/search?q=${encodeURIComponent(finalText.trim())}&source=voice`);
-            setShowDropdown(false);
-            setVoiceState("idle");
-            voiceStateRef.current = "idle";
-          }, 500);
-        } else if (voiceStateRef.current !== "error") {
-          setVoiceState("idle");
-          voiceStateRef.current = "idle";
+        clearAllTimers();
+        recognitionRef.current = null;
+
+        if (intentionalStopRef.current) {
+          return;
         }
+
+        if (voiceStateRef.current === "error") {
+          return;
+        }
+
+        navigateWithTranscript();
       };
 
       recognition.start();
-    } catch (err) {
-      console.error("Voice recognition error:", err);
-      setVoiceError("Could not start voice recognition. Please try again.");
-      setVoiceState("error");
-      voiceStateRef.current = "error";
+    } catch {
+      setVoiceError("Could not start voice recognition.");
+      setStateAndRef("error");
       setTimeout(() => {
-        setVoiceState("idle");
-        voiceStateRef.current = "idle";
+        setStateAndRef("idle");
+        setVoiceError("");
       }, 3000);
     }
-  }, [voiceSupported, router]);
-
-
-
-
-  const stopVoiceRecognition = useCallback(() => {
-    if (voiceTimeoutRef.current) clearTimeout(voiceTimeoutRef.current);
-    recognitionRef.current?.stop();
-    setVoiceState("idle");
-  }, []);
+  }, [voiceSupported, clearAllTimers, setStateAndRef, navigateWithTranscript]);
 
   const handleVoiceButtonClick = useCallback(() => {
     if (voiceState === "listening") {
       stopVoiceRecognition();
-    } else {
+    } else if (voiceState === "idle" || voiceState === "error") {
       startVoiceRecognition();
     }
   }, [voiceState, startVoiceRecognition, stopVoiceRecognition]);
 
-  
-  // voice state ui helpers
-  
   const getVoiceButtonTitle = () => {
     if (!voiceSupported) return "Voice search not supported in this browser";
     switch (voiceState) {
       case "listening":
-        return "Listening… Click to stop";
+        return "Click to stop listening";
       case "processing":
-        return "Processing your voice…";
+        return "Processing…";
       case "error":
         return voiceError || "Voice search error";
       default:
-        return "Search by voice (Phase 12)";
+        return "Search by voice";
     }
   };
 
@@ -321,10 +366,8 @@ const SearchInput = () => {
 
   return (
     <>
-
-      {/* voice listening overlay toast */}
       {voiceState === "listening" && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-accent text-white px-5 py-3 rounded-full shadow-2xl animate-fade-in pointer-events-none">
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-accent text-white px-5 py-3 rounded-full shadow-2xl animate-fade-in">
           <div className="relative flex items-center justify-center w-6 h-6">
             <span className="absolute inline-flex h-full w-full rounded-full bg-lightRed opacity-75 animate-ping" />
             <span className="relative inline-flex w-3 h-3 rounded-full bg-lightRed" />
@@ -336,7 +379,7 @@ const SearchInput = () => {
             </p>
           </div>
           <button
-            className="pointer-events-auto ml-2 px-3 py-1 text-xs bg-white/15 rounded-full hover:bg-white/25 transition-colors font-semibold"
+            className="ml-2 px-3 py-1 text-xs bg-white/15 rounded-full hover:bg-white/25 transition-colors font-semibold"
             onClick={stopVoiceRecognition}
           >
             Stop
@@ -344,7 +387,6 @@ const SearchInput = () => {
         </div>
       )}
 
-      {/* voice error toast */}
       {voiceState === "error" && voiceError && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-red-600 text-white px-4 py-2.5 rounded-full shadow-xl pointer-events-none text-xs font-medium">
           <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -382,7 +424,6 @@ const SearchInput = () => {
           />
 
           <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-3">
-            {/* clear search input */}
             {search && (
               <IoMdClose
                 className="text-accent/50 hover:text-lightRed hoverEffect cursor-pointer text-lg shrink-0"
@@ -394,10 +435,9 @@ const SearchInput = () => {
               />
             )}
 
-            {/* visual search redirect */}
             <button
               onClick={() => router.push("/visual-search")}
-              title="Search by image (Phase 11)"
+              title="Search by image"
               aria-label="Redirect to visual search"
               className="text-lightText/60 hover:text-lightOrange transition-colors duration-200 shrink-0"
             >
@@ -407,24 +447,20 @@ const SearchInput = () => {
               </svg>
             </button>
 
-            {/* voice search handler */}
             <button
               onClick={handleVoiceButtonClick}
               disabled={!voiceSupported || voiceState === "processing"}
               title={getVoiceButtonTitle()}
               aria-label={getVoiceButtonTitle()}
-              className={`text-xl transition-all duration-200 shrink-0 ${getVoiceButtonColor()} ${
+              className={`transition-all duration-200 shrink-0 ${getVoiceButtonColor()} ${
                 voiceState === "listening" ? "scale-110" : ""
               }`}
             >
               {voiceState === "listening" ? (
-                // animated mic icon when listening
                 <svg className="w-5 h-5 text-lightRed" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4z" />
-                  <path d="M19.07 10.586A7.001 7.001 0 0 1 5 11v-.5a1 1 0 0 0-2 0V11a9 9 0 0 0 8 8.945V21H9a1 1 0 0 0 0 2h6a1 1 0 0 0 0-2h-2v-1.055A9.001 9.001 0 0 0 21 11v-.5a1 1 0 0 0-2 0v.086z" />
+                  <rect x="6" y="6" width="12" height="12" rx="2" />
                 </svg>
               ) : (
-                /* Normal mic icon */
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" />
@@ -432,7 +468,6 @@ const SearchInput = () => {
               )}
             </button>
 
-            {/* text search button */}
             <button
               onClick={handleSearchSubmit}
               className="bg-lightOrange text-white px-3 py-1.5 text-xs sm:text-sm hover:bg-darkOrange hoverEffect font-medium rounded-sm shrink-0"
@@ -442,7 +477,6 @@ const SearchInput = () => {
           </div>
         </div>
 
-        {/* glassmorphic autocomplete dropdown */}
         {showDropdown && (
           <div className="absolute top-14 left-0 right-0 bg-white/90 backdrop-blur-md border border-gray-200/50 shadow-2xl rounded-md overflow-hidden z-50 transition-all duration-300 max-h-[380px] overflow-y-auto">
             {loading ? (
@@ -500,7 +534,6 @@ const SearchInput = () => {
                   </div>
                 ))}
 
-                {/* Visual Search prompt at the bottom of dropdown */}
                 <button
                   onClick={() => {
                     setShowDropdown(false);
