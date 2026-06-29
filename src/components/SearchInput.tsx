@@ -173,10 +173,29 @@ const SearchInput = () => {
   
   // voice search handler
   
-  const startVoiceRecognition = useCallback(() => {
+  const startVoiceRecognition = useCallback(async () => {
     if (!voiceSupported) {
       setVoiceError("Voice search is not supported in your browser.");
       setVoiceState("error");
+      voiceStateRef.current = "error";
+      setTimeout(() => {
+        setVoiceState("idle");
+        voiceStateRef.current = "idle";
+      }, 3000);
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((t) => t.stop());
+    } catch {
+      setVoiceError("Microphone access denied. Please allow microphone permission in your browser settings.");
+      setVoiceState("error");
+      voiceStateRef.current = "error";
+      setTimeout(() => {
+        setVoiceState("idle");
+        voiceStateRef.current = "idle";
+      }, 4000);
       return;
     }
 
@@ -191,10 +210,12 @@ const SearchInput = () => {
       recognition.continuous = false;
 
       recognitionRef.current = recognition;
+      transcriptRef.current = "";
+      setSearch("");
       setVoiceState("listening");
+      voiceStateRef.current = "listening";
       setVoiceError("");
 
-      // auto-stop after 8 seconds
       voiceTimeoutRef.current = setTimeout(() => {
         recognition.stop();
       }, 8000);
@@ -220,7 +241,7 @@ const SearchInput = () => {
         if (event.error === "no-speech") {
           setVoiceError("No speech detected. Please try again.");
         } else if (event.error === "not-allowed") {
-          setVoiceError("Microphone access denied. Please allow microphone permission.");
+          setVoiceError("Microphone access denied. Please allow microphone permission in your browser settings.");
         } else {
           setVoiceError(`Voice error: ${event.error}`);
         }
@@ -229,7 +250,7 @@ const SearchInput = () => {
         setTimeout(() => {
           setVoiceState("idle");
           voiceStateRef.current = "idle";
-        }, 3000);
+        }, 4000);
       };
 
       recognition.onend = () => {
@@ -264,6 +285,8 @@ const SearchInput = () => {
       }, 3000);
     }
   }, [voiceSupported, router]);
+
+
 
   const stopVoiceRecognition = useCallback(() => {
     if (voiceTimeoutRef.current) clearTimeout(voiceTimeoutRef.current);
