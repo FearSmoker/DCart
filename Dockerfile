@@ -88,8 +88,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Create non-root user for security
-RUN addgroup --system --gid 1001 nodejs && \
+# Install wget for health checks and create non-root user
+RUN apk add --no-cache wget && \
+    addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
 # Copy only the artifacts needed at runtime
@@ -104,8 +105,8 @@ USER nextjs
 
 EXPOSE 3000
 
-# Health check: verify the app responds on port 3000
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+# Health check: use lightweight /api/health (no SSR / Firebase dependency)
+HEALTHCHECK --interval=30s --timeout=15s --start-period=120s --retries=5 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
 CMD ["node", "server.js"]

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDB } from "@/firebaseAdmin";
 
-export const revalidate = 60; // cache for 1 minute
+export const dynamic = "force-dynamic";
+
 
 // public: returns store name and join date for a vendor (used on product pages)
 export async function GET(request: NextRequest) {

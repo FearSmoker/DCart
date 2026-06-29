@@ -46,11 +46,12 @@ services:
       - dcart-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 30s
-      timeout: 10s
-      start_period: 40s
-      retries: 3
+      timeout: 15s
+      start_period: 120s
+      retries: 5
+
 
   # ---------------------------------------------------------------------------
   # AI Service — FastAPI recommendation & fraud engine

@@ -181,7 +181,7 @@ jobs:
       - name: Wait for services to be healthy
         run: |
           echo "Waiting for services to start..."
-          sleep 60
+          sleep 90
 
           echo "Checking Redis..."
           docker compose exec -T redis redis-cli ping || echo "Redis not ready"
@@ -197,13 +197,13 @@ jobs:
           done
 
           echo "Checking Next.js..."
-          for i in $(seq 1 10); do
-            if curl -sf http://localhost:3000/; then
+          for i in $(seq 1 20); do
+            if curl -sf http://localhost:3000/api/health; then
               echo "Next.js is healthy"
               break
             fi
             echo "Attempt $i: Next.js not ready, waiting..."
-            sleep 10
+            sleep 15
           done
 
           echo "Checking Nginx..."
@@ -220,7 +220,7 @@ jobs:
         run: |
           echo "=== Final Health Checks ==="
           # Core app services — must pass
-          curl -f http://localhost:3000/ && echo " ✅ Next.js OK"
+          curl -f http://localhost:3000/api/health && echo " ✅ Next.js OK"
           curl -f http://localhost:8000/health && echo " ✅ AI Service OK"
           curl -f http://localhost/nginx-health && echo " ✅ Nginx OK"
           # Observability — non-fatal (may not be ready in CI timing)
