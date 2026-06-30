@@ -12,7 +12,7 @@ const securityHeaders = [
   // disable unused browser features
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), payment=(self), usb=()",
+    value: "camera=(self), microphone=(self), geolocation=(), payment=(self), usb=()",
   },
   // force HTTPS for 1 year
   {

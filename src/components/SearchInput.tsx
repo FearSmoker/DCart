@@ -290,6 +290,12 @@ const SearchInput = () => {
         }, 4000);
       };
 
+      // NOTE: We intentionally do NOT special-case "!startedRef.current" here
+      // as a "blocked" condition anymore. Permission denial is already handled
+      // by onerror ('not-allowed' / 'service-not-allowed') above. If onend fires
+      // without an error and without ever starting, it just means the browser
+      // aborted silently (e.g. rapid re-clicks) — go back to idle instead of
+      // showing a misleading "blocked" message.
       recognition.onend = () => {
         clearAllTimers();
         recognitionRef.current = null;
@@ -299,16 +305,6 @@ const SearchInput = () => {
         }
 
         if (voiceStateRef.current === "error") {
-          return;
-        }
-
-        if (!startedRef.current) {
-          setVoiceError("Microphone blocked. Click the lock icon in your address bar → allow microphone → reload the page.");
-          setStateAndRef("error");
-          setTimeout(() => {
-            setStateAndRef("idle");
-            setVoiceError("");
-          }, 5000);
           return;
         }
 
@@ -326,52 +322,22 @@ const SearchInput = () => {
     }
   }, [voiceSupported, clearAllTimers, setStateAndRef, navigateWithTranscript]);
 
-  const handleVoiceButtonClick = useCallback(async () => {
+  // FIXED: Removed the navigator.permissions.query() + getUserMedia() preflight.
+  // That preflight added awaits/setTimeouts between the click and recognition.start(),
+  // which broke the browser's "user gesture" requirement for showing the native
+  // mic-permission prompt — causing recognition.start() to silently no-op and
+  // always fall into the "blocked" error path, even after granting permission.
+  //
+  // recognition.start() itself triggers the native permission prompt (first time),
+  // and onstart/onerror('not-allowed') correctly report the outcome. Calling it
+  // directly and synchronously from the click handler preserves the user gesture.
+  const handleVoiceButtonClick = useCallback(() => {
     if (voiceState === "listening") {
       stopVoiceRecognition();
       return;
     }
-
-    let permissionState: "granted" | "denied" | "prompt" = "prompt";
-    try {
-      if (navigator.permissions && navigator.permissions.query) {
-        const status = await navigator.permissions.query({ name: "microphone" as any });
-        permissionState = status.state;
-      }
-    } catch {
-      permissionState = "prompt";
-    }
-
-    if (permissionState === "denied") {
-      setVoiceError("Microphone blocked. Click the lock icon in your address bar → allow microphone → reload the page.");
-      setStateAndRef("error");
-      setTimeout(() => {
-        setStateAndRef("idle");
-        setVoiceError("");
-      }, 5000);
-      return;
-    }
-
-    if (permissionState === "granted") {
-      startVoiceRecognition();
-      return;
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((track) => track.stop());
-      setTimeout(() => {
-        startVoiceRecognition();
-      }, 1000);
-    } catch {
-      setVoiceError("Microphone blocked. Click the lock icon in your address bar → allow microphone → reload the page.");
-      setStateAndRef("error");
-      setTimeout(() => {
-        setStateAndRef("idle");
-        setVoiceError("");
-      }, 5000);
-    }
-  }, [voiceState, startVoiceRecognition, stopVoiceRecognition, setStateAndRef]);
+    startVoiceRecognition();
+  }, [voiceState, startVoiceRecognition, stopVoiceRecognition]);
 
   const getVoiceButtonTitle = () => {
     if (!voiceSupported) return "Voice search not supported in this browser";
