@@ -233,7 +233,6 @@ const SearchInput = () => {
       startedRef.current = false;
       setSearch("");
       setVoiceError("");
-      setStateAndRef("listening");
 
       maxTimerRef.current = setTimeout(() => {
         if (recognitionRef.current) {
@@ -340,42 +339,13 @@ const SearchInput = () => {
     }
   }, [voiceSupported, clearAllTimers, setStateAndRef, navigateWithTranscript]);
 
-  const handleVoiceButtonClick = useCallback(async () => {
+  const handleVoiceButtonClick = useCallback(() => {
     if (voiceState === "listening") {
       stopVoiceRecognition();
-      return;
-    }
-
-    try {
-      if (navigator.permissions && navigator.permissions.query) {
-        const status = await navigator.permissions.query({ name: "microphone" as any });
-        if (status.state === "denied") {
-          setVoiceError("Microphone blocked. Click the lock icon in address bar → allow mic → reload.");
-          setStateAndRef("error");
-          setTimeout(() => {
-            setStateAndRef("idle");
-            setVoiceError("");
-          }, 5000);
-          return;
-        }
-        if (status.state === "granted") {
-          startVoiceRecognition();
-          return;
-        }
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((track) => track.stop());
+    } else if (voiceState === "idle" || voiceState === "error") {
       startVoiceRecognition();
-    } catch {
-      setVoiceError("Microphone access denied. Please allow microphone access in your browser settings.");
-      setStateAndRef("error");
-      setTimeout(() => {
-        setStateAndRef("idle");
-        setVoiceError("");
-      }, 5000);
     }
-  }, [voiceState, startVoiceRecognition, stopVoiceRecognition, setStateAndRef]);
+  }, [voiceState, startVoiceRecognition, stopVoiceRecognition]);
 
   const getVoiceButtonTitle = () => {
     if (!voiceSupported) return "Voice search not supported in this browser";
