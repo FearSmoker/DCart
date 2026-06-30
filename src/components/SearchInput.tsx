@@ -221,7 +221,7 @@ const SearchInput = () => {
         window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognitionAPI();
 
-      recognition.lang = "en-IN";
+      recognition.lang = navigator.language || "en-US";
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
       recognition.continuous = false;
@@ -262,19 +262,6 @@ const SearchInput = () => {
         const combined = (finalTranscript + interimTranscript).trim();
         setSearch(combined);
         transcriptRef.current = combined;
-
-        if (silenceTimerRef.current) {
-          clearTimeout(silenceTimerRef.current);
-          silenceTimerRef.current = null;
-        }
-
-        if (finalTranscript.trim()) {
-          silenceTimerRef.current = setTimeout(() => {
-            if (recognitionRef.current && voiceStateRef.current === "listening") {
-              recognitionRef.current.stop();
-            }
-          }, SILENCE_TIMEOUT_MS);
-        }
       };
 
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
@@ -373,7 +360,9 @@ const SearchInput = () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach((track) => track.stop());
-      startVoiceRecognition();
+      setTimeout(() => {
+        startVoiceRecognition();
+      }, 1000);
     } catch {
       setVoiceError("Microphone blocked. Click the lock icon in your address bar → allow microphone → reload the page.");
       setStateAndRef("error");
