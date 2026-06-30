@@ -287,7 +287,7 @@ const SearchInput = () => {
         if (event.error === "no-speech") {
           setVoiceError("No speech detected. Try again.");
         } else if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-          setVoiceError("Microphone blocked. Click the lock icon in address bar → allow mic → reload.");
+          setVoiceError("Microphone blocked. Click the lock icon in your address bar → allow microphone → reload the page.");
         } else if (event.error === "network") {
           setVoiceError("Network error. Check your connection.");
         } else if (event.error === "audio-capture") {
@@ -316,7 +316,7 @@ const SearchInput = () => {
         }
 
         if (!startedRef.current) {
-          setVoiceError("Microphone access denied. Click the lock icon in address bar → allow mic → reload the page.");
+          setVoiceError("Microphone blocked. Click the lock icon in your address bar → allow microphone → reload the page.");
           setStateAndRef("error");
           setTimeout(() => {
             setStateAndRef("idle");
@@ -339,13 +339,50 @@ const SearchInput = () => {
     }
   }, [voiceSupported, clearAllTimers, setStateAndRef, navigateWithTranscript]);
 
-  const handleVoiceButtonClick = useCallback(() => {
+  const handleVoiceButtonClick = useCallback(async () => {
     if (voiceState === "listening") {
       stopVoiceRecognition();
-    } else if (voiceState === "idle" || voiceState === "error") {
-      startVoiceRecognition();
+      return;
     }
-  }, [voiceState, startVoiceRecognition, stopVoiceRecognition]);
+
+    let permissionState: "granted" | "denied" | "prompt" = "prompt";
+    try {
+      if (navigator.permissions && navigator.permissions.query) {
+        const status = await navigator.permissions.query({ name: "microphone" as any });
+        permissionState = status.state;
+      }
+    } catch {
+      permissionState = "prompt";
+    }
+
+    if (permissionState === "denied") {
+      setVoiceError("Microphone blocked. Click the lock icon in your address bar → allow microphone → reload the page.");
+      setStateAndRef("error");
+      setTimeout(() => {
+        setStateAndRef("idle");
+        setVoiceError("");
+      }, 5000);
+      return;
+    }
+
+    if (permissionState === "granted") {
+      startVoiceRecognition();
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      startVoiceRecognition();
+    } catch {
+      setVoiceError("Microphone blocked. Click the lock icon in your address bar → allow microphone → reload the page.");
+      setStateAndRef("error");
+      setTimeout(() => {
+        setStateAndRef("idle");
+        setVoiceError("");
+      }, 5000);
+    }
+  }, [voiceState, startVoiceRecognition, stopVoiceRecognition, setStateAndRef]);
 
   const getVoiceButtonTitle = () => {
     if (!voiceSupported) return "Voice search not supported in this browser";
