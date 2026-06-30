@@ -347,6 +347,23 @@ const SearchInput = () => {
     }
 
     try {
+      if (navigator.permissions && navigator.permissions.query) {
+        const status = await navigator.permissions.query({ name: "microphone" as any });
+        if (status.state === "denied") {
+          setVoiceError("Microphone blocked. Click the lock icon in address bar → allow mic → reload.");
+          setStateAndRef("error");
+          setTimeout(() => {
+            setStateAndRef("idle");
+            setVoiceError("");
+          }, 5000);
+          return;
+        }
+        if (status.state === "granted") {
+          startVoiceRecognition();
+          return;
+        }
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach((track) => track.stop());
       startVoiceRecognition();
