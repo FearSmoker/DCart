@@ -290,12 +290,6 @@ const SearchInput = () => {
         }, 4000);
       };
 
-      // NOTE: We intentionally do NOT special-case "!startedRef.current" here
-      // as a "blocked" condition anymore. Permission denial is already handled
-      // by onerror ('not-allowed' / 'service-not-allowed') above. If onend fires
-      // without an error and without ever starting, it just means the browser
-      // aborted silently (e.g. rapid re-clicks) — go back to idle instead of
-      // showing a misleading "blocked" message.
       recognition.onend = () => {
         clearAllTimers();
         recognitionRef.current = null;
@@ -322,15 +316,6 @@ const SearchInput = () => {
     }
   }, [voiceSupported, clearAllTimers, setStateAndRef, navigateWithTranscript]);
 
-  // FIXED: Removed the navigator.permissions.query() + getUserMedia() preflight.
-  // That preflight added awaits/setTimeouts between the click and recognition.start(),
-  // which broke the browser's "user gesture" requirement for showing the native
-  // mic-permission prompt — causing recognition.start() to silently no-op and
-  // always fall into the "blocked" error path, even after granting permission.
-  //
-  // recognition.start() itself triggers the native permission prompt (first time),
-  // and onstart/onerror('not-allowed') correctly report the outcome. Calling it
-  // directly and synchronously from the click handler preserves the user gesture.
   const handleVoiceButtonClick = useCallback(() => {
     if (voiceState === "listening") {
       stopVoiceRecognition();
